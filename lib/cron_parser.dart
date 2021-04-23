@@ -1,10 +1,6 @@
 // Copyright (c) 2020, rbubke. All rights reserved. Use of this source code
 // is governed by a BSD-style license that can be found in the LICENSE file.
 
-import 'package:timezone/data/latest.dart';
-import 'package:timezone/standalone.dart';
-import 'package:timezone/timezone.dart';
-
 abstract class HasNext<E> {
   E next();
 
@@ -12,17 +8,12 @@ abstract class HasNext<E> {
 }
 
 abstract class Cron {
-  factory Cron() {
-    initializeTimeZones();
-    return _Cron();
-  }
+  factory Cron() => _Cron();
 
-  // Takes a [cronString], a [locationName] and an optional [startTime].
-  // It returns an iterator [HasNext] which delivers [TZDateTime] events. If no [startTime]
-  // is provided [TZDateTime.now(getLocation(locationName)] is used.
-  // The [locationName] string has to be in the format listed at http://www.iana.org/time-zones.
-  HasNext<TZDateTime> parse(String cronString, String locationName,
-      [TZDateTime startTime]);
+  // Takes a [cronString] and an optional [startTime] and returns an
+  // iterator [HasNext] which delivers [DateTime] events. If no [startTime]
+  // is provided [DateTime.now()] is used.
+  HasNext<DateTime> parse(String cronString, [DateTime startTime]);
 }
 
 const String _regex0to59 = "([1-5]?[0-9])";
@@ -45,14 +36,10 @@ final RegExp _cronRegex = RegExp(
 
 class _Cron implements Cron {
   @override
-  HasNext<TZDateTime> parse(String cronString, String locationName,
-      [TZDateTime startTime]) {
+  HasNext<DateTime> parse(String cronString, [DateTime startTime]) {
     assert(cronString.isNotEmpty);
     assert(_cronRegex.hasMatch(cronString));
-    assert(locationName != null);
-    var location = getLocation(locationName);
-    if (startTime == null) startTime = TZDateTime.now(location);
-    startTime = TZDateTime.from(startTime, location);
+    if (startTime == null) startTime = DateTime.now();
     return _CronIterator(_parse(cronString), startTime);
   }
 
@@ -136,34 +123,33 @@ List<int> _parseConstraint(dynamic constraint) {
   throw 'Unable to parse: $constraint';
 }
 
-class _CronIterator implements HasNext<TZDateTime> {
+class _CronIterator implements HasNext<DateTime> {
   _Schedule _schedule;
-  TZDateTime _currentDate;
+  DateTime _currentDate;
   bool _nextCalled = false;
 
   _CronIterator(this._schedule, this._currentDate) {
-    _currentDate = TZDateTime.fromMillisecondsSinceEpoch(_currentDate.location,
+    _currentDate = DateTime.fromMillisecondsSinceEpoch(
         this._currentDate.millisecondsSinceEpoch ~/ 60000 * 60000);
   }
 
   @override
-  TZDateTime next() {
+  DateTime next() {
     _nextCalled = true;
     _currentDate = _currentDate.add(Duration(minutes: 1));
     while (true) {
       if (_schedule?.months?.contains(_currentDate.month) == false) {
-        _currentDate = TZDateTime(_currentDate.location, _currentDate.year,
-            _currentDate.month + 1, 1);
+        _currentDate = DateTime(_currentDate.year, _currentDate.month + 1, 1);
         continue;
       }
       if (_schedule?.weekdays?.contains(_currentDate.weekday) == false) {
-        _currentDate = TZDateTime(_currentDate.location, _currentDate.year,
-            _currentDate.month, _currentDate.day + 1);
+        _currentDate = DateTime(
+            _currentDate.year, _currentDate.month, _currentDate.day + 1);
         continue;
       }
       if (_schedule?.days?.contains(_currentDate.day) == false) {
-        _currentDate = TZDateTime(_currentDate.location, _currentDate.year,
-            _currentDate.month, _currentDate.day + 1);
+        _currentDate = DateTime(
+            _currentDate.year, _currentDate.month, _currentDate.day + 1);
         continue;
       }
       if (_schedule?.hours?.contains(_currentDate.hour) == false) {
@@ -181,7 +167,7 @@ class _CronIterator implements HasNext<TZDateTime> {
   }
 
   @override
-  TZDateTime current() {
+  DateTime current() {
     assert(_nextCalled);
     return _currentDate;
   }
