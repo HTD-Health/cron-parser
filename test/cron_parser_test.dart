@@ -3,7 +3,7 @@ import 'package:test/test.dart';
 import '../lib/cron_parser.dart';
 
 void main() {
-  DateTime normalizedDate([DateTime dateTime]) {
+  DateTime normalizedDate([DateTime? dateTime]) {
     DateTime date = dateTime == null ? DateTime.now() : dateTime;
 
     return date.subtract(Duration(
